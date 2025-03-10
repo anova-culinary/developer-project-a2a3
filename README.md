@@ -1,15 +1,14 @@
-# Original BT/WiFi Anova Precision® Cooker Interface
+# Original BT/WiFi Anova Precision® Cooker
 
-A command-line utility for controlling the original BT/WiFi Anova Precision® Cooker sous vide devices via Bluetooth Low Energy (BLE). Supports both the 800w (BT-only) model and the 900w (BT+WiFi) model with an interactive command interface.
+A command-line utility for controlling the original BT/WiFi Anova Precision® Cooker sous vide devices via Bluetooth Low Energy (BLE). This utility supports both BT-only 800w models and the BT+WiFi-enabled 900w model, providing an interactive command loop to send various commands and receive responses from the cooker.
 
 ## Features
 
-- **Multi-Model Support:** Compatible with both 800w (BT-only) and 900w (WiFi-enabled) models
-- **Auto-Detection:** Identifies model type and enables model-specific commands
-- **BLE Scanning & Connection:** Automatically discovers compatible devices using service UUID
-- **Interactive Command Loop:** Provides a REPL interface for continuous device control
-- **Comprehensive Command Set:** Control temperature, timer, unit settings, and device status
-- **Model-Specific Functions:** Supports clearing alarms and firmware version checks on WiFi models
+- **BLE Scanning & Connection:** Automatically scans for devices advertising the specified service UUID
+- **Interactive Command Loop:** Provides a REPL interface where you can issue commands until you type `exit`
+- **Multi-Model Support:** Detects whether the connected cooker is the 800w or 900w model and enables model-specific commands accordingly
+- **Comprehensive Command Set:** Supports commands for starting/stopping cooking, reading temperatures, setting timers, and more
+- **Robust Response Handling:** Accumulates response chunks from BLE notifications until a complete response is received
 
 ## Requirements
 
@@ -23,102 +22,144 @@ A command-line utility for controlling the original BT/WiFi Anova Precision® Co
    pip install bleak
    ```
 
-2. **Clone/Download the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/original-precision-cooker.git
-   cd original-precision-cooker
-   ```
+2. **Download the Script:**
+   Clone or download the repository containing the CLI utility file.
 
 3. **Run the Script:**
+   Execute the script directly to start in interactive mode:
    ```bash
    python original_precision_cooker.py
    ```
 
-## Usage
+## Architecture & Code Structure
 
-Run the script to enter interactive mode:
+The code is organized into the following sections:
+
+- **BLE Constants & Command Functions:**
+  - Defines the service UUID and characteristic UUID used for BLE communication
+  - Implements simple command functions (e.g., `CMD_START`, `CMD_STOP`) that return command strings
+
+- **AnovaCookerClient Class:**
+  - Manages BLE connection to the cooker
+  - Starts notifications on the designated characteristic and handles responses
+  - Provides a method (`send_command`) to send a command (with a carriage return appended) and wait for a response
+  - Determines the model (800w or 900w) by sending the `CMD_GET_COOKER_ID` command
+
+- **Interactive Command Loop:**
+  - Runs a REPL interface where the user can enter commands
+  - Dispatches commands to the cooker and logs the responses
+  - Provides model-specific help based on whether the cooker is a WiFi (900w) model
+
+- **BLE Device Scanning:**
+  - Scans for BLE devices advertising the specified service UUID or containing "anova" in their name
+  - Selects the first matching device and returns its address
+
+## BLE Communication Protocol
+
+- **Service & Characteristic UUIDs:**
+  - **Service UUID:** `0000ffe0-0000-1000-8000-00805f9b34fb`
+  - **Characteristic UUID:** `0000ffe1-0000-1000-8000-00805f9b34fb`
+
+- **Command Transmission:**
+  - Commands are sent as ASCII strings with a trailing carriage return (`\r`)
+  - The client writes data to the characteristic without waiting for an immediate response
+
+- **Response Handling:**
+  - BLE notifications are used to receive responses
+  - The response is accumulated until a chunk less than 20 bytes is received or it ends with a `0x0` byte
+  - The response is then decoded from ASCII and returned to the caller
+
+## Interactive Usage
+
+To start the interactive REPL, simply run the script:
 
 ```bash
 python original_precision_cooker.py
 ```
 
-The script will:
-1. Scan for compatible devices
-2. Connect to the first device found
-3. Determine the model (800w or 900w)
-4. Display available commands based on your model
-5. Enter interactive mode where you can issue commands
+After connecting, you'll see a help message listing all available commands. You can enter commands such as `status`, `set_temp`, `set_timer`, etc., and view the responses directly in the terminal. Type `exit` to disconnect and quit the interactive mode.
 
-### Available Commands
+## Subcommands Overview
+
+Below is a table of available commands for the interactive mode:
 
 | Command | Description |
-|---------|-------------|
-| `status` | Get cooker status |
-| `read_unit` | Read the current temperature unit (C/F) |
-| `set_unit` | Set the temperature unit |
-| `set_temp` | Set the target temperature |
-| `read_target_temp` | Read the target temperature |
-| `read_temp` | Read the current temperature |
-| `set_timer` | Set the timer in minutes |
-| `read_timer` | Read the current timer value |
-| `start_timer` | Start the timer |
-| `stop_timer` | Stop the timer |
-| `start` | Start cooking (prompts for temperature and timer) |
-| `stop` | Stop cooking |
-| `beep` | Beep the device |
-| `clear_alarm`* | Clear any alarm (WiFi model only) |
-| `firmware_version`* | Read the firmware version (WiFi model only) |
-| `help` | Show help message |
-| `exit` | Disconnect and quit |
+| --- | --- |
+| **help** | Show this help message. |
+| **status** | Get cooker status (sends `"status"`). |
+| **read_unit** | Read the current temperature unit (sends `"read unit"`). |
+| **set_unit** | Set the temperature unit. You will be prompted for a value (e.g., C or F) (sends `"set unit <value>"`). |
+| **set_temp** | Set the target temperature. You will be prompted for a value (sends `"set temp <value>"`). |
+| **read_target_temp** | Read the target temperature (sends `"read set temp"`). |
+| **read_temp** | Read the current temperature (sends `"read temp"`). |
+| **set_timer** | Set the timer in minutes. You will be prompted for a value (sends `"set timer <value>"`). |
+| **read_timer** | Read the current timer value (sends `"read timer"`). |
+| **start_timer** | Start the timer (sends `"start time"`). |
+| **stop_timer** | Stop the timer (sends `"stop time"`). |
+| **clear_alarm** | Clear any alarm (sends `"clear alarm"`) – *only available on the WiFi (900w) model*. |
+| **firmware_version** | Read the firmware version (sends `"version"`) – *only available on the WiFi (900w) model*. |
+| **start** | Start cooking. Prompts for target temperature and timer. Executes a sequence: set temperature, stop timer, set timer, start cooking, and (if timer > 0) start timer. |
+| **stop** | Stop cooking (sends `"stop"`). |
+| **beep** | Beep (sends `"stop"` as a placeholder command). |
+| **exit** | Disconnect from the device and exit the interactive mode. |
 
-\* Only available on 900w (WiFi) models
+## API Reference
 
-### Cooking Workflow Example
+### Core Classes & Functions
 
-To start cooking at 65.5°C for 2 hours:
-1. Enter `set_unit` (then enter `C` when prompted)
-2. Enter `set_temp` (then enter `65.5` when prompted)
-3. Enter `set_timer` (then enter `120` when prompted)
-4. Enter `start` to start cooking
-5. Enter `start_timer` to begin the countdown
+### `AnovaCookerClient`
 
-Alternatively, use the `start` command which will prompt for temperature and timer, then perform all necessary steps automatically.
+Handles the BLE connection and communication with the cooker.
 
-## BLE Communication Protocol
+- **Attributes:**
+  - `address`: The BLE address of the cooker.
+  - `client`: Instance of `BleakClient` used for BLE communication.
+  - `is_wifi_model`: Boolean flag indicating if the connected cooker is a WiFi (900w) model.
+- **Methods:**
+  - `connect()`: Connects to the device and starts BLE notifications.
+  - `disconnect()`: Stops notifications and disconnects from the device.
+  - `_notification_handler(sender, data)`: Callback for BLE notifications that accumulates data until a complete response is received.
+  - `send_command(command: str, timeout: float = 15.0) -> str`: Sends a command (appending a carriage return) and waits for a response.
 
-- **Service UUID:** `0000ffe0-0000-1000-8000-00805f9b34fb`
-- **Characteristic UUID:** `0000ffe1-0000-1000-8000-00805f9b34fb`
-- **Command Format:** ASCII strings with trailing carriage return (`\r`)
-- **Response Handling:** Accumulates BLE notification chunks until a complete response is received
+### Command Functions
 
-## Architecture
+These functions return command strings to be sent to the cooker:
 
-The code is organized into several components:
+- `CMD_START()`
+- `CMD_STOP()`
+- `CMD_READ_TARGET_TEMP()`
+- `CMD_READ_TEMP()`
+- `CMD_READ_UNIT()`
+- `CMD_READ_TIMER()`
+- `CMD_START_TIMER()`
+- `CMD_STOP_TIMER()`
+- `CMD_CLEAR_ALARM()` *Note: Available only on WiFi (900w) models.*
+- `CMD_FIRMWARE_VERSION()` *Note: Available only on WiFi (900w) models.*
+- `CMD_STATUS()`
+- `CMD_SET_TIMER(minutes)`
+- `CMD_SET_TEMP(temp)`
+- `CMD_SET_UNIT(unit)`
+- `CMD_GET_COOKER_ID()`
 
-- **AnovaCookerClient Class:** Manages BLE connection, notifications, and command/response handling
-- **Command Functions:** Provides formatted command strings for all supported operations
-- **BLE Scanning:** Discovers compatible devices by service UUID or name
-- **Interactive Loop:** Implements the REPL interface with command dispatch
-- **Model Detection:** Identifies device model to enable appropriate commands
+### Helper Functions
 
-## Debugging
+- `scan_and_select_device() -> str`: Scans for BLE devices and returns the address of the first device advertising the specified service.
+- `print_help(is_wifi_model)`: Displays the available commands and model-specific options.
+- `interactive_loop(client: AnovaCookerClient)`: Runs the interactive REPL for sending commands and displaying responses.
 
-Enable detailed logging for troubleshooting:
+## Logging & Debugging
+
+The script uses Python's built-in `logging` module to output status messages and errors. The logging level is set to `INFO` by default. For more verbose output, adjust the logging configuration:
 
 ```python
-import logging
 logging.basicConfig(level=logging.DEBUG)
 ```
 
+Logs include information on device scanning, connection status, command dispatch, and error messages.
+
 ## Contributing
 
-Contributions, bug reports, and suggestions are welcome! To contribute:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Contributions, bug reports, and suggestions are welcome! Please ensure that any new code is well documented and tested. Follow the existing style and documentation guidelines when contributing changes.
 
 ## License
 
@@ -127,7 +168,7 @@ This project is licensed under the MIT License:
 ```
 MIT License
 
-Copyright (c) 2025 2025 Anova Applied Electronics, Inc
+Copyright (c) 2025 Anova Applied Electronics, Inc
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
