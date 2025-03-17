@@ -157,10 +157,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 Logs include information on device scanning, connection status, command dispatch, and error messages.
 
-## Contributing
-
-Contributions, bug reports, and suggestions are welcome! Please ensure that any new code is well documented and tested. Follow the existing style and documentation guidelines when contributing changes.
-
 ## License
 
 This project is licensed under the MIT License:
