@@ -56,6 +56,10 @@ The code is organized into the following sections:
 
 ## BLE Communication Protocol
 
+- **Device Pairing:**
+  - Pairing occurs automatically on power up (or reboot) of the cooker
+  - The device becomes discoverable and ready for BLE connection during startup
+
 - **Service & Characteristic UUIDs:**
   - **Service UUID:** `0000ffe0-0000-1000-8000-00805f9b34fb`
   - **Characteristic UUID:** `0000ffe1-0000-1000-8000-00805f9b34fb`
