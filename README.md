@@ -1,6 +1,10 @@
+<img src="https://developer.anovaculinary.com/img/logo.svg" alt="Anova Developers" width="350"/>
+
 # Original BT/WiFi Anova Precision® Cooker
 
 A command-line utility for controlling the original BT/WiFi Anova Precision® Cooker sous vide devices via Bluetooth Low Energy (BLE). This utility supports both BT-only 800w models and the BT+WiFi-enabled 900w model, providing an interactive command loop to send various commands and receive responses from the cooker.
+
+<img src="https://developer.anovaculinary.com/img/Anova_Precision_Cooker_A2A3.jpg" alt="Anova Developers" width="271"/>
 
 ## Features
 
